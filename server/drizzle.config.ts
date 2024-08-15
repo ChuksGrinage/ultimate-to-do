@@ -5,6 +5,6 @@ export default defineConfig({
   schema: './src/schema/',
   out: './drizzle',
   dbCredentials: {
-    url: process.env.DB_URL,
+    url: 'postgresql://dev:devPassword@localhost:5432/ultimate_to_do_db',
   },
 })

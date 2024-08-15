@@ -2,6 +2,7 @@
   "name": "server",
   "module": "src/index.ts",
   "scripts": {
+    "start": "bun run src/index.ts",
     "generate": "drizzle-kit generate",
     "migrate": "drizzle-kit migrate",
     "gen-env-types": "bunx gen-env-types .env -o src/types/env.d.ts -e ."
@@ -17,6 +18,9 @@
   "type": "module",
   "dependencies": {
     "drizzle-orm": "^0.33.0",
+    "hono": "^4.5.5",
+    "hono-sessions": "^0.5.8",
+    "oslo": "^1.2.1",
     "pg": "^8.12.0"
   }
 }
