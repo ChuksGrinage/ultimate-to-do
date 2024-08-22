@@ -1,12 +1,18 @@
 import { Hono } from 'hono'
 import { CookieStore, Session, sessionMiddleware } from 'hono-sessions'
-import { getCookie, setCookie } from 'hono/cookie'
+import { deleteCookie, getCookie, setCookie } from 'hono/cookie'
 import { generateState, OAuth2Client } from 'oslo/oauth2'
 
 import { eq } from 'drizzle-orm'
+import { cors } from 'hono/cors'
 import { db } from './db'
-import { isAuth } from './middleware/isAuth'
-import { account } from './schema'
+import { taskRoutes } from './routes'
+import { account, type Account } from './schema'
+
+const CLIENT_URL = Bun.env.CLIENT_URL
+
+const NEXT_PAGE_SESSION_KEY = 'nextPage'
+const GOOGLE_OAUTH2_STATE_COOKIE_NAME = 'google_oauth2_state'
 
 const app = new Hono<{
   Variables: {
@@ -22,7 +28,7 @@ const googleOAuth2Client = new OAuth2Client(
   'https://accounts.google.com/o/oauth2/v2/auth',
   'https://oauth2.googleapis.com/token',
   {
-    // TODO: Add to env variavbles
+    // TODO: Add to env variables
     redirectURI: 'http://localhost:8080/login/google/callback',
   }
 )
@@ -49,8 +55,24 @@ app.use(
     },
   })
 )
+
+app.use(
+  '*',
+  cors({
+    origin: CLIENT_URL,
+    allowHeaders: ['*'],
+    allowMethods: ['*'],
+    exposeHeaders: ['*'],
+    maxAge: 600,
+    credentials: true,
+  })
+)
+
 app.get('/login/google', async (c) => {
   const googleOAuth2State = generateState()
+  const nextPage = c.req.query('next')
+  const session = c.get('session')
+  session.set(NEXT_PAGE_SESSION_KEY, nextPage)
 
   const url = await googleOAuth2Client.createAuthorizationURL({
     state: googleOAuth2State,
@@ -60,9 +82,9 @@ app.get('/login/google', async (c) => {
     ],
   })
 
-  console.log(`Redirect url: ${url}`)
+  // console.log(`Redirect url: ${url}`)
 
-  setCookie(c, 'google_oauth2_state', googleOAuth2State, {
+  setCookie(c, GOOGLE_OAUTH2_STATE_COOKIE_NAME, googleOAuth2State, {
     httpOnly: true,
     secure: false, // `true` for production
     path: '/',
@@ -88,18 +110,18 @@ app.get('/login/google/callback', async (c, next) => {
     }
   )
 
-  console.log(`accessToken: ${access_token}`)
+  // console.log(`accessToken: ${access_token}`)
 
   const authUser = await getGoogleUser(access_token)
-  let [accountFromDb] = await db
+  let [dbAccount] = await db
     .select()
     .from(account)
     .where(eq(account.email, authUser.email))
     .execute()
 
-  if (!accountFromDb) {
+  if (!dbAccount) {
     // new user
-    ;[accountFromDb] = await db
+    ;[dbAccount] = await db
       .insert(account)
       .values({
         email: authUser.email as string,
@@ -110,33 +132,42 @@ app.get('/login/google/callback', async (c, next) => {
       .returning()
   }
 
-  console.log(`user: ${JSON.stringify(authUser)}`, { accountFromDb })
+  // console.log(`user: ${JSON.stringify(authUser)}`, { accountFromDb: dbAccount })
 
   // set user information to the session cookie
   const session = c.get('session')
-  session.set('user', accountFromDb)
+  session.set('user', dbAccount)
+  const nextPage = session.get(NEXT_PAGE_SESSION_KEY)
 
-  return c.redirect('/')
+  return c.redirect(CLIENT_URL + nextPage)
 })
 
-app.get('/logout', (c) => {
-  c.get('session').deleteSession()
-  return c.redirect('/')
+app.get('/logout', async (c) => {
+  deleteCookie(c, GOOGLE_OAUTH2_STATE_COOKIE_NAME)
+
+  return c.redirect(CLIENT_URL)
+})
+
+app.get('/me', async (c) => {
+  const session = c.get('session')
+  const user = session.get('user') as Account
+
+  if (!user) {
+    return c.text('Unauthorized', 401)
+  }
+
+  const [dbAccount] = await db
+    .select()
+    .from(account)
+    .where(eq(account.email, user.email))
+    .execute()
+
+  return c.json(dbAccount)
 })
 
 app.get('/ping', (c) => c.json({ data: 'Pong! 🏓' }))
 
-app.use('/task/*', isAuth)
-
-app.get('/task', async (c) => {
-  const { page, pageSize } = c.req.query()
-  const data = await db.query.task.findMany({
-    orderBy: (tasks, { asc }) => asc(tasks.id),
-    limit: Number(pageSize),
-    offset: (Number(page) - 1) * Number(pageSize),
-  })
-  return c.json({ data })
-})
+app.route('/task', taskRoutes)
 
 export default {
   port: process.env.PORT,

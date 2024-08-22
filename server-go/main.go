@@ -32,10 +32,11 @@ func main() {
 
 
     r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-        w.Write([]byte("Hello World!"))
+        respondWithJSON(w, 200, MyData{"Hello World!"})
     })
 	r.Get("/ping", func(w http.ResponseWriter, r *http.Request) {
 		respondWithJSON(w, 200, MyData{ "pong 🏓" })
 	})
+
     http.ListenAndServe(":8080", r)
 }
