@@ -8,6 +8,7 @@ taskRoutes.use('/task/*', isAuth)
 
 taskRoutes.get('/task', async (c) => {
   const { page, pageSize } = c.req.query()
+
   const data = await db.query.task.findMany({
     orderBy: (tasks, { asc }) => asc(tasks.id),
     limit: Number(pageSize),

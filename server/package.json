@@ -17,6 +17,7 @@
   },
   "type": "module",
   "dependencies": {
+    "@hono/zod-validator": "^0.2.2",
     "drizzle-orm": "^0.33.0",
     "hono": "^4.5.5",
     "hono-sessions": "^0.5.8",

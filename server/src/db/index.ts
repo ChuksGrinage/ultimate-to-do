@@ -12,8 +12,7 @@ import * as schema from '../schema'
 // })
 
 const client = new Client({
-  connectionString:
-    'postgresql://chuksgrinage@localhost:5432/ultimate_to_do_db',
+  connectionString: Bun.env.DATABASE_URL,
 })
 
 await client.connect()

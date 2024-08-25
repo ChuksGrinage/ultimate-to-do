@@ -10,9 +10,7 @@ export default function LoginPage() {
     <main className="">
       <a
         className="rounded bg-blue-500 px-4 py-2 font-bold text-white hover:bg-blue-700"
-        href={`${
-          process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"
-        }/login/google${nextLocation ? `?next=${nextLocation}` : ""}`}
+        href={`${process.env.NEXT_PUBLIC_SERVER_URL}/login/google${nextLocation ? `?next=${nextLocation}` : ""}`}
       >
         Login with Google
       </a>

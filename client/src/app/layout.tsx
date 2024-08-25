@@ -1,27 +1,31 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 "use client";
+import { GeistSans } from "geist/font/sans";
 import "~/styles/globals.css";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { GeistSans } from "geist/font/sans";
-
-// export const metadata: Metadata = {
-//   title: "The Ultimate TO-DO APP",
-//   description: "Ultimate TO-DO app",
-//   icons: [{ rel: "icon", url: "/favicon.ico" }],
-// };
 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
 const queryClient = new QueryClient();
 
-export default function RootLayout({
-  children,
-}: Readonly<{ children: React.ReactNode }>) {
+import { usePathname } from "next/navigation";
+import { DashboardLayout } from "~/components";
+
+export default function RootLayout({ children }) {
+  const pathName = usePathname();
   return (
-    <html lang="en" className={`${GeistSans.variable}`}>
-      {/*  eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-assignment */}
-      <QueryClientProvider client={queryClient}>
-        <body>{children}</body>
-      </QueryClientProvider>
+    <html lang="en" className={`h-full bg-gray-900 ${GeistSans.variable}`}>
+      <body className="h-full">
+        <QueryClientProvider client={queryClient}>
+          {pathName === "/login" ? (
+            <div className="flex h-full w-full items-center justify-center">
+              {children}
+            </div>
+          ) : (
+            <DashboardLayout>{children}</DashboardLayout>
+          )}
+        </QueryClientProvider>
+      </body>
     </html>
   );
 }
